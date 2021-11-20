@@ -148,7 +148,7 @@ try:
                 L1.duty(brightness)
                 L1.freq(500)
                 lightSwitchCheck_prev = lightSwitchCheck
-                # print("night light enabled")
+                print("night light enabled")
             elif lightSwitchCheck == 1 and lightSwitchCheck_prev == lightSwitchCheck:
                 brightness = 0
                 L1.duty(brightness)
