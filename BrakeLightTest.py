@@ -32,7 +32,7 @@ IMU_start = time.ticks_ms()
 IMU_interval = 10
 
 light_start = 0
-light_interval = 1500
+light_interval = 2000
 
 switch_start = 0
 switch_interval = 1000
