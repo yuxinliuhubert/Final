@@ -5,7 +5,7 @@ import time
 
 
 i2c = I2C(1,scl=Pin(5),sda=Pin(23),freq=400000)
-
+button = Pin(15, mode = Pin.IN)
 
 for i in range(len(i2c.scan())):
 	print(hex(i2c.scan()[i]))
@@ -61,7 +61,7 @@ try:
 		xacc = Xaccel(i2c.scan()[i])
 		yacc = Yaccel(i2c.scan()[i])
 		zacc = Zaccel(i2c.scan()[i])
-		# print("x,y,z ","%4.2f" % (xacc/16393),"%4.2f" % (yacc/16393),"%4.2f" % (zacc/16393))
+		print("x,y,z ","%4.2f" % (xacc/16393),"%4.2f" % (yacc/16393),"%4.2f" % (zacc/16393))
 		# print("x,y,z ",zacc/16383)
 		time.sleep(0.1)
 
