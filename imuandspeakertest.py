@@ -1,10 +1,18 @@
-from machine import Pin
-from machine import PWM
-from machine import Timer
-from machine import I2C
+#<REQUIRED MODULES>
+#for communication and actuation of hardware components connected to ESP32
+from machine import Pin, PWM, Timer, I2C
+#for the abs() function
 import math
+#for converting binary to hex
 from binascii import hexlify
+#for keeping track of system time
 import time
+
+#<CONNECTED HARDWARE COMPONENTS>
+loudspeaker = Pin(27, mode=Pin.OUT)
+button2 = Pin(15, mode = Pin.IN)
+
+# <INERTIAL MEASUREMENT UNIT READING TEMPERATURE, ACCELERATION, AND ANGULAR SPEED>
 i2c = I2C(1,scl=Pin(22),sda=Pin(23),freq=400000)
 
 for i in range(len(i2c.scan())):
@@ -25,13 +33,7 @@ def Temperature(i2caddr):
     return temperature
     #print("%4.2f" % ((temperature)/(256) + 25))
 
-# Acceleration pulled data
-def Zaccel(i2caddr):
-    zacc = int.from_bytes(i2c.readfrom_mem(i2caddr,0x2C,2),"little")
-    if zacc > 32767:
-        zacc = zacc -65536
-    return zacc
-    #print("%4.2f" % (zacc/16393))
+# XYZ Acceleration pulled data
 def Xaccel(i2caddr):
     xacc = int.from_bytes(i2c.readfrom_mem(i2caddr,0x28,2),"little")
     if xacc > 32767:
@@ -44,14 +46,14 @@ def Yaccel(i2caddr):
         yacc = yacc -65536
     return yacc
     #print("%4.2f" % (yacc/16393))
+def Zaccel(i2caddr):
+    zacc = int.from_bytes(i2c.readfrom_mem(i2caddr,0x2C,2),"little")
+    if zacc > 32767:
+        zacc = zacc -65536
+    return zacc
+    #print("%4.2f" % (zacc/16393))
 
-# Gyroscope pulled data
-def Zgyro(i2caddr):
-    zgyr = int.from_bytes(i2c.readfrom_mem(i2caddr,0x26,2),"little")
-    if zgyr > 32767:
-        zgyr = zgyr -65536
-    return zgyr
-    #print("%4.2f" % (zgyr/16393))
+# XYZ Gyroscope pulled data
 def Xgyro(i2caddr):
     xgyr = int.from_bytes(i2c.readfrom_mem(i2caddr,0x22,2),"little")
     if xgyr > 32767:
@@ -64,6 +66,13 @@ def Ygyro(i2caddr):
         ygyr = ygyr -65536
     return ygyr
     #print("%4.2f" % (ygyr/16393))
+def Zgyro(i2caddr):
+    zgyr = int.from_bytes(i2c.readfrom_mem(i2caddr,0x26,2),"little")
+    if zgyr > 32767:
+        zgyr = zgyr -65536
+    return zgyr
+    #print("%4.2f" % (zgyr/16393))
+
 
 buff=[0xA0]
 i2c.writeto_mem(i2c.scan()[i],0x10,bytes(buff))
@@ -72,7 +81,7 @@ time.sleep(0.1)
 
 
 
-
+#<NOTES SETUP WITH CORRESPONDING FREQUENCIES>
 C3 = 131 
 CS3 = 139 
 D3 = 147 
@@ -138,6 +147,7 @@ CS8 = 4435
 D8 = 4699 
 DS8 = 4978 
 
+#<SONG SETUP>
 song = [C4, E4, G4, C5, E5, G4, C5, E5, C4, E4, G4, C5, E5, G4, C5, E5, 
 C4, D4, G4, D5, F5, G4, D5, F5, C4, D4, G4, D5, F5, G4, D5, F5, 
 B3, D4, G4, D5, F5, G4, D5, F5, B3, D4, G4, D5, F5, G4, D5, F5, 
@@ -151,22 +161,22 @@ A3, C4, E4, G4, C5, E4, G4, C5, A3, C4, E4, G4, C5, E4, G4, C5,
 D3, A3, D4, FS4, C5, D4, FS4, C5, D3, A3, D4, FS4, C5, D4, FS4, C5, 
 G3, B3, D4, G4, B4, D4, G4, B4, G3, B3, D4, G4, B4, D4, G4, B4 ]
 
-
+#<WHILE LOOP VARIABLE INITIALIZATIONS>
+#IMU Data Update Custom Timer Inits
 IMU_Interval = 100
 IMU_Start = 0 
-
+#Fall Detection Speaker Activation Custom Timer Inits
 Speaker_Interval = 300
 Speaker_Start = 0
-
-loudspeaker = Pin(27, mode=Pin.OUT)
-loudness = 0
+#Note Pointer in Song Counter Inits
 note_pointer = 0
+#Speaker PWM Inits
+L1 = PWM(loudspeaker, freq=song[note_pointer], duty=0, timer=0)
+#Speaker Activation Counter Inits
+fall_count = 0
+current_fall = 0
+prev_fall = 0
 
-button2 = Pin(15, mode = Pin.IN)
-
-duration = 0
-
-L1 = PWM(loudspeaker, freq=song[note_pointer], duty=loudness, timer=0)
 try:
     while(1):
         if time.ticks_ms() - IMU_Start >= IMU_Interval:
@@ -183,23 +193,33 @@ try:
         if time.ticks_ms() - Speaker_Start >= Speaker_Interval:
             ya = Yaccel(i2c.scan()[i])/16393
             button2_Status = button2.value()
+            #
             if abs(ya) > .5:
-                duration += 1
-            if duration >= 10:
-                if button2_Status == 1:
-                    duration = 0
-                    L1.duty(0)
-                else:
-                    loudness = 85
-                    # L1 = PWM(loudspeaker, freq=song[note_pointer], duty=loudness, timer=0)
-                    L1.duty(loudness)
+                current_fall = 1
+            else:
+                current_fall = 0
+            if prev_fall == current_fall:
+                fall_count += current_fall
+            if prev_fall != current_fall:
+                fall_count  = current_fall
+                prev_fall = current_fall
+            # Enters into speaker activated mode after 3 consecutive seconds
+            if fall_count >= 10:
+                # If the OK button is not pressed, the speaker will be unmuted, and a note in the song will be played each time the counter loops.
+                if button2_Status == 0:
+                    L1.duty(85)
                     L1.freq(song[note_pointer])
                     if note_pointer < len(song)-1:
                         note_pointer += 1
                     else:
                         note_pointer = 0
-    
+                # If the OK button is pressed, the speaker will be muted.
+                if button2_Status == 1:
+                    L1.duty(0)
+                    fall_count = 0
+                    note_pointer = 0
             Speaker_Start = time.ticks_ms()
 except KeyboardInterrupt:
     i2c.deinit()
+    L1.deinit()
     pass
