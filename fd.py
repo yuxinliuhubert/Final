@@ -301,7 +301,7 @@ try:
                                 # if current - last_print >= 1.0:
                                 last_print = time.gmtime()
                                 last_print = gm_time_processor(last_print)
-                                testMessage ="Current Time is "+last_print+", Location unavilable"
+                                testMessage ="Current Time is "+last_print+", Location unavailable"
                                 # testMessage = "1"
                                 # testMessage = str(gps.timestamp_utc[0]),"/",str(gps.timestamp_utc[1]),"/",str(gps.timestamp_utc[2])," ",str(round(gps.timestamp_utc[3])),":",str(round(gps.timestamp_utc[4])),":",str(round(gps.timestamp_utc[5]))
                                 # print("Fix timestamp: {}/{}/{} {:02}:{:02}:{:02}".format(gps.timestamp_utc[0], gps.timestamp_utc[1], gps.timestamp_utc[2], gps.timestamp_utc[3], gps.timestamp_utc[4], gps.timestamp_utc[5]))
