@@ -62,7 +62,9 @@ try:
                 if gps.height_geoid is not None:
                     print("Height geoid: {} meters".format(gps.height_geoid))
             else:
+                print("Waiting for fix... {}/{}/{} {:02}:{:02}:{:02}".format(gps.timestamp_utc[0], gps.timestamp_utc[1], gps.timestamp_utc[2], gps.timestamp_utc[3], gps.timestamp_utc[4], gps.timestamp_utc[5]))
                 print("Waiting for fix...")
+
             gps_start = time.ticks_ms()
 
 except KeyboardInterrupt:

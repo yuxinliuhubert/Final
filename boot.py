@@ -6,8 +6,8 @@ import time
 wlan = WLAN(STA_IF)
 wlan.active(True)
 
-wlan.connect('ME100-2.4G', '122Hesse', 5000)
-# wlan.connect('3Yellow1Brown', 'Carolisqueen', 5000)
+# wlan.connect('ME100-2.4G', '122Hesse', 5000)
+wlan.connect('3Yellow1Brown', 'Carolisqueen', 5000)
 
 tries = 0
 while not wlan.isconnected() and tries < 10:
@@ -48,7 +48,7 @@ print("inquire RTC time")
 rtc = RTC()
 rtc.ntp_sync(server="pool.ntp.org")
 
-timeout = 10
+timeout = 2
 for _ in range(timeout):
     if rtc.synced():
         break
