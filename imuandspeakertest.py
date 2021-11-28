@@ -179,9 +179,8 @@ prev_fall = 0
 
 try:
     while(1):
+        # IMU Data Update Custom Timer
         if time.ticks_ms() - IMU_Start >= IMU_Interval:
-            #whoami = WHOAMI(i2c.scan()[i])
-            #temp = Temperature(i2c.scan()[i])
             xa = Xaccel(i2c.scan()[i])
             ya = Yaccel(i2c.scan()[i])
             za = Zaccel(i2c.scan()[i])
@@ -190,10 +189,11 @@ try:
             zg = Zgyro(i2c.scan()[i])
             print("x acc:","%4.2f" % (xa/16393), "y acc:", "%4.2f" % (ya/16393), "z acc:","%4.2f" % (za/16393), "x gyr:", "%4.2f" % (xg/16393), "y gyr:", "%4.2f" % (yg/16393), "z gyr:", "%4.2f" % (zg/16393))
             IMU_start = time.ticks_ms()
+        # Fall Detection Speaker Activation Custom Timer
         if time.ticks_ms() - Speaker_Start >= Speaker_Interval:
             ya = Yaccel(i2c.scan()[i])/16393
             button2_Status = button2.value()
-            #
+            # Speaker Activiation Count tracker. Will reset to zero if y accelerometer registers greater than .5 but not for 3 consecutive seconds. 
             if abs(ya) > .5:
                 current_fall = 1
             else:
