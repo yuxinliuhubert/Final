@@ -41,7 +41,7 @@ gps.send_command("b'PMTK220,1000'")
 # Set up Adafruit connection
 adafruitIoUrl = 'io.adafruit.com'
 adafruitUsername = 'yuxinhubert'
-adafruitAioKey = 'aio_AEBP41Jg3PiusrNMwzIRLBxDxOhO'
+adafruitAioKey = 'aio_sUVn46VH5hi5ZFXUuGzQYXAd5X9b'
 
 # Define callback function
 def sub_cb(topic, msg):
