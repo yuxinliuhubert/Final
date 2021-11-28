@@ -121,13 +121,26 @@ def Zgyro(i2caddr):
 
 def gm_time_processor(string):
     string = str(string)
-    string.replace('(',' ')
-    string.replace(')',' ')
-    for i in range (1,7):
+    drop_index = string.find(', 1, 332)')
+    string = string[0 : drop_index]
+    print(string)
+    string = string.replace('(','')
+    string = string.replace(')','')
+    print(string)
+    for j in range (1,6):
+        index = string.find(' ')
+        string = string[0 : index] + string[index + 1 : :]
+
+    for i in range (1,6):
         index = string.find(',')
+        # print(index)
         if i <= 2:
-            string.replace('')
-            string = strObj[0 : index : ] + strObj[index + 1 : :]
+            string = string[0 : index] +"/"+string[index + 1 : :]
+
+        elif i <= 3:
+            string = string[0 : index] +" "+ string[index + 1 : :]
+        else:
+            string = string[0 : index] +":"+string[index + 1 : :]
     return string
 
 buff=[0xA0]
