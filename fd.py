@@ -1,19 +1,64 @@
 #<REQUIRED MODULES>
 #for communication and actuation of hardware components connected to ESP32
-from machine import Pin, PWM, Timer, I2C
+from machine import Pin, PWM, Timer, I2C, UART
 #for the abs() function
 import math
 #for converting binary to hex
 from binascii import hexlify
 #for keeping track of system time
 import time
+import math
+from mqttclient import MQTTClient
+import network
+import sys
+import adafruit_gps
+
 
 #<CONNECTED HARDWARE COMPONENTS>
 loudspeaker = Pin(4, mode=Pin.OUT)
 button2 = Pin(15, mode = Pin.IN)
+uart = UART(2,tx=17,rx=16)
+uart.init(9600, bits=8, parity=None, stop=1)
 
 # <INERTIAL MEASUREMENT UNIT READING TEMPERATURE, ACCELERATION, AND ANGULAR SPEED>
 i2c = I2C(1,scl=Pin(22),sda=Pin(23),freq=400000)
+
+gps = adafruit_gps.GPS(uart)
+
+# Turn on the basic GGA and RMC info (what you typically want)
+gps.send_command("b'PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0'")
+
+# Set update rate to once a second (1hz) which is what you typically want.
+gps.send_command("b'PMTK220,1000'")
+
+# Main loop runs forever printing the location, etc. every second.
+last_print = time.monotonic()
+
+# timer set up to update every 2 seconds
+gps_start = time.ticks_ms()
+gps_interval = 2000
+
+# register with adafruit website
+adafruitIoUrl = 'io.adafruit.com'
+adafruitUsername = 'yuxinhubert'
+adafruitAioKey = 'aio_sUVn46VH5hi5ZFXUuGzQYXAd5X9b'
+
+# Define callback function
+def sub_cb(topic, msg):
+    print((topic, msg))
+
+# Connect to Adafruit server
+print("Connecting to Adafruit")
+mqtt = MQTTClient(adafruitIoUrl, port='1883', user=adafruitUsername, password=adafruitAioKey)
+time.sleep(0.5)
+print("Connected!")
+
+# This will set the function sub_cb to be called when mqtt.check_msg() checks
+# that there is a message pending
+mqtt.set_callback(sub_cb)
+
+
+
 
 for i in range(len(i2c.scan())):
     print(hex(i2c.scan()[i]))
@@ -177,8 +222,17 @@ fall_count = 0
 current_fall = 0
 prev_fall = 0
 
+alarm_Interval = 10000
+alarm_start = time.ticks_ms()
+# just so that the fall time is only recorded once
+alarm_start_check = 0
+alarm_sent_check = 0
+
 try:
     while(1):
+        if alarm_start_check == 0:
+            alarm_start = time.ticks_ms()
+        gps.update()
         # IMU Data Update Custom Timer
         if time.ticks_ms() - IMU_Start >= IMU_Interval:
             xa = Xaccel(i2c.scan()[i])
@@ -187,7 +241,7 @@ try:
             xg = Xgyro(i2c.scan()[i])
             yg = Ygyro(i2c.scan()[i])
             zg = Zgyro(i2c.scan()[i])
-            print("x acc:","%4.2f" % (xa/16393), "y acc:", "%4.2f" % (ya/16393), "z acc:","%4.2f" % (za/16393), "x gyr:", "%4.2f" % (xg/16393), "y gyr:", "%4.2f" % (yg/16393), "z gyr:", "%4.2f" % (zg/16393))
+            # print("x acc:","%4.2f" % (xa/16393), "y acc:", "%4.2f" % (ya/16393), "z acc:","%4.2f" % (za/16393), "x gyr:", "%4.2f" % (xg/16393), "y gyr:", "%4.2f" % (yg/16393), "z gyr:", "%4.2f" % (zg/16393))
             IMU_start = time.ticks_ms()
         # Fall Detection Speaker Activation Custom Timer
         if time.ticks_ms() - Speaker_Start >= Speaker_Interval:
@@ -205,8 +259,38 @@ try:
                 prev_fall = current_fall
             # Enters into speaker activated mode after 3 consecutive seconds
             if fall_count >= 10:
+
                 # If the OK button is not pressed, the speaker will be unmuted, and a note in the song will be played each time the counter loops.
                 if button2_Status == 0:
+                    alarm_start_check = 1
+                    if time.ticks_ms() - alarm_start >= alarm_Interval:
+                        if alarm_sent_check == 0:
+                            if gps.has_fix:
+                                testMessage = "Current Time is "+str(gps.timestamp_utc[0])+"/"+str(gps.timestamp_utc[1])+"/"+str(gps.timestamp_utc[2])+" "+str(round(gps.timestamp_utc[3]))+":"+str(round(gps.timestamp_utc[4]))+":"+str(round(gps.timestamp_utc[5]))
+                                testMessage = testMessage+", location coordinates are: "+str(gps.longitude)+" W, "+str(gps.latitude)+" N."
+                                print("testMessage, ",testMessage)
+                            else:
+                                # current =
+                                # print("current time, ",testMessage)
+                                # if current - last_print >= 1.0:
+                                last_print = time.gmtime()
+                                testMessage ="Current Time is "+str(last_print)+", Location unavilable"
+                                # testMessage = "1"
+                                # testMessage = str(gps.timestamp_utc[0]),"/",str(gps.timestamp_utc[1]),"/",str(gps.timestamp_utc[2])," ",str(round(gps.timestamp_utc[3])),":",str(round(gps.timestamp_utc[4])),":",str(round(gps.timestamp_utc[5]))
+                                # print("Fix timestamp: {}/{}/{} {:02}:{:02}:{:02}".format(gps.timestamp_utc[0], gps.timestamp_utc[1], gps.timestamp_utc[2], gps.timestamp_utc[3], gps.timestamp_utc[4], gps.timestamp_utc[5]))
+                                print("no fix, returned previous time", last_print)
+                                print("current time, ",testMessage)
+
+
+                            # Send test message
+                            feedName = "yuxinhubert/feeds/Final_project"
+                            # testMessage = "1"
+                            # testMessage = "1"
+                            mqtt.publish(feedName,testMessage)
+                            print("Published {} to {}.".format(testMessage,feedName))
+
+                            mqtt.subscribe(feedName)
+                            alarm_sent_check = 1
                     L1.duty(85)
                     L1.freq(song[note_pointer])
                     if note_pointer < len(song)-1:
@@ -215,6 +299,9 @@ try:
                         note_pointer = 0
                 # If the OK button is pressed, the speaker will be muted.
                 if button2_Status == 1:
+                    alarm_start_check = 0
+                    alarm_sent_check == 0
+                    # note: assumption made that when user press the button, pick up right away, otherwise location data will be sent again
                     L1.duty(0)
                     fall_count = 0
                     note_pointer = 0

@@ -9,7 +9,7 @@ import machine
 
 uart = UART(2,tx=17,rx=16)
 uart.init(9600, bits=8, parity=None, stop=1)
-time.sleep(1)
+time.sleep(0.25)
 
 
 gps = adafruit_gps.GPS(uart)

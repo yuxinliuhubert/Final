@@ -25,7 +25,8 @@ lightSwitchCheck_prev = 0
 L1 = PWM(led_ext,freq=500,duty=brightness,timer=0)
 
 # initialize i2C protocol
-i2c = I2C(1,scl=Pin(5),sda=Pin(23),freq=400000)
+# i2c = I2C(1,scl=Pin(5),sda=Pin(23),freq=400000)
+i2c = I2C(1,scl=Pin(22),sda=Pin(23),freq=400000)
 
 # multi-threading timer comparing variables
 IMU_start = time.ticks_ms()
