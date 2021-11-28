@@ -253,11 +253,17 @@ alarm_start = time.ticks_ms()
 alarm_start_check = 0
 alarm_sent_check = 0
 
+location_save = "Location unavailable"
 try:
     while(1):
         if alarm_start_check == 0:
             alarm_start = time.ticks_ms()
         gps.update()
+
+
+        if gps.has_fix:
+            gps_time = "Current Time is "+str(gps.timestamp_utc[0])+"/"+str(gps.timestamp_utc[1])+"/"+str(gps.timestamp_utc[2])+" "+str(round(gps.timestamp_utc[3]))+":"+str(round(gps.timestamp_utc[4]))+":"+str(round(gps.timestamp_utc[5]))
+            location_save = str(gps.longitude)+" W, "+str(gps.latitude)+" N."
         # IMU Data Update Custom Timer
         if time.ticks_ms() - IMU_Start >= IMU_Interval:
             xa = Xaccel(i2c.scan()[i])
@@ -270,13 +276,18 @@ try:
             IMU_start = time.ticks_ms()
         # Fall Detection Speaker Activation Custom Timer
         if time.ticks_ms() - Speaker_Start >= Speaker_Interval:
-            ya = Yaccel(i2c.scan()[i])/16393
+            if gps.has_fix:
+                location_save = str(gps.longitude)+" W, "+str(gps.latitude)+" N."
+
+            za = Zaccel(i2c.scan()[i])/16393
             button2_Status = button2.value()
             # Speaker Activiation Count tracker. Will reset to zero if y accelerometer registers greater than .5 but not for 3 consecutive seconds.
-            if abs(ya) > .5:
+            if abs(za) > .5:
                 current_fall = 1
             else:
                 current_fall = 0
+                alarm_start_check = 0
+                alarm_sent_check = 0
                 L1.duty(0)
             if prev_fall == current_fall:
                 fall_count += current_fall
@@ -293,20 +304,14 @@ try:
                         if alarm_sent_check == 0:
                             if gps.has_fix:
                                 testMessage = "Current Time is "+str(gps.timestamp_utc[0])+"/"+str(gps.timestamp_utc[1])+"/"+str(gps.timestamp_utc[2])+" "+str(round(gps.timestamp_utc[3]))+":"+str(round(gps.timestamp_utc[4]))+":"+str(round(gps.timestamp_utc[5]))
-                                testMessage = testMessage+", location coordinates are: "+str(gps.longitude)+" W, "+str(gps.latitude)+" N."
-                                print("testMessage, ",testMessage)
+                                testMessage = testMessage+", location coordinates are: "+location_save
+                                print("fix fall message, ",testMessage)
                             else:
-                                # current =
-                                # print("current time, ",testMessage)
-                                # if current - last_print >= 1.0:
+
                                 last_print = time.gmtime()
                                 last_print = gm_time_processor(last_print)
-                                testMessage ="Current Time is "+last_print+", Location unavailable"
-                                # testMessage = "1"
-                                # testMessage = str(gps.timestamp_utc[0]),"/",str(gps.timestamp_utc[1]),"/",str(gps.timestamp_utc[2])," ",str(round(gps.timestamp_utc[3])),":",str(round(gps.timestamp_utc[4])),":",str(round(gps.timestamp_utc[5]))
-                                # print("Fix timestamp: {}/{}/{} {:02}:{:02}:{:02}".format(gps.timestamp_utc[0], gps.timestamp_utc[1], gps.timestamp_utc[2], gps.timestamp_utc[3], gps.timestamp_utc[4], gps.timestamp_utc[5]))
-                                print("no fix, returned previous time", last_print)
-                                print("current time, ",testMessage)
+                                testMessage ="Current Time is "+last_print+", location coordinates are: "+location_save
+                                print("no fix fall message: ",testMessage)
 
 
                             # Send test message
@@ -327,7 +332,7 @@ try:
                 # If the OK button is pressed, the speaker will be muted.
                 if button2_Status == 1:
                     alarm_start_check = 0
-                    alarm_sent_check == 0
+                    alarm_sent_check = 0
                     # note: assumption made that when user press the button, pick up right away, otherwise location data will be sent again
                     L1.duty(0)
                     fall_count = 0
