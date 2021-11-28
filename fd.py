@@ -119,6 +119,17 @@ def Zgyro(i2caddr):
     #print("%4.2f" % (zgyr/16393))
 
 
+def gm_time_processor(string):
+    string = str(string)
+    string.replace('(',' ')
+    string.replace(')',' ')
+    for i in range (1,7):
+        index = string.find(',')
+        if i <= 2:
+            string.replace('')
+            string = strObj[0 : index : ] + strObj[index + 1 : :]
+    return string
+
 buff=[0xA0]
 i2c.writeto_mem(i2c.scan()[i],0x10,bytes(buff))
 i2c.writeto_mem(i2c.scan()[i],0x11,bytes(buff))
@@ -276,7 +287,8 @@ try:
                                 # print("current time, ",testMessage)
                                 # if current - last_print >= 1.0:
                                 last_print = time.gmtime()
-                                testMessage ="Current Time is "+str(last_print)+", Location unavilable"
+                                last_print = gm_time_processor(last_print)
+                                testMessage ="Current Time is "+last_print+", Location unavilable"
                                 # testMessage = "1"
                                 # testMessage = str(gps.timestamp_utc[0]),"/",str(gps.timestamp_utc[1]),"/",str(gps.timestamp_utc[2])," ",str(round(gps.timestamp_utc[3])),":",str(round(gps.timestamp_utc[4])),":",str(round(gps.timestamp_utc[5]))
                                 # print("Fix timestamp: {}/{}/{} {:02}:{:02}:{:02}".format(gps.timestamp_utc[0], gps.timestamp_utc[1], gps.timestamp_utc[2], gps.timestamp_utc[3], gps.timestamp_utc[4], gps.timestamp_utc[5]))
