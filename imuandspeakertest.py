@@ -198,13 +198,14 @@ try:
                 current_fall = 1
             else:
                 current_fall = 0
+                L1.duty(0)
             if prev_fall == current_fall:
                 fall_count += current_fall
             if prev_fall != current_fall:
                 fall_count  = current_fall
                 prev_fall = current_fall
             # Enters into speaker activated mode after 3 consecutive seconds
-            if fall_count >= 10:
+            if fall_count >= 10 and abs(ya) > .5:
                 # If the OK button is not pressed, the speaker will be unmuted, and a note in the song will be played each time the counter loops.
                 if button2_Status == 0:
                     L1.duty(85)
@@ -218,6 +219,7 @@ try:
                     L1.duty(0)
                     fall_count = 0
                     note_pointer = 0
+                
             Speaker_Start = time.ticks_ms()
 except KeyboardInterrupt:
     i2c.deinit()

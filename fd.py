@@ -252,6 +252,7 @@ try:
                 current_fall = 1
             else:
                 current_fall = 0
+                L1.duty(0)
             if prev_fall == current_fall:
                 fall_count += current_fall
             if prev_fall != current_fall:
