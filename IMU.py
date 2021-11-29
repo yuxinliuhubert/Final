@@ -4,7 +4,7 @@ from binascii import hexlify
 import time
 
 
-i2c = I2C(1,scl=Pin(5),sda=Pin(23),freq=400000)
+i2c = I2C(1,scl=Pin(22),sda=Pin(23),freq=400000)
 button = Pin(15, mode = Pin.IN)
 
 for i in range(len(i2c.scan())):

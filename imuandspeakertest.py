@@ -163,7 +163,7 @@ G3, B3, D4, G4, B4, D4, G4, B4, G3, B3, D4, G4, B4, D4, G4, B4 ]
 
 #<WHILE LOOP VARIABLE INITIALIZATIONS>
 #IMU Data Update Custom Timer Inits
-IMU_Interval = 100
+IMU_Interval = 10
 IMU_Start = 0
 #Fall Detection Speaker Activation Custom Timer Inits
 Speaker_Interval = 300
@@ -176,6 +176,8 @@ L1 = PWM(loudspeaker, freq=song[note_pointer], duty=0, timer=0)
 fall_count = 0
 current_fall = 0
 prev_fall = 0
+#Jerk Inits
+prev_ya = 0
 
 try:
     while(1):
@@ -188,37 +190,43 @@ try:
             yg = Ygyro(i2c.scan()[i])
             zg = Zgyro(i2c.scan()[i])
             print("x acc:","%4.2f" % (xa/16393), "y acc:", "%4.2f" % (ya/16393), "z acc:","%4.2f" % (za/16393), "x gyr:", "%4.2f" % (xg/16393), "y gyr:", "%4.2f" % (yg/16393), "z gyr:", "%4.2f" % (zg/16393))
-            IMU_start = time.ticks_ms()
-        # Fall Detection Speaker Activation Custom Timer
-        if time.ticks_ms() - Speaker_Start >= Speaker_Interval:
-            ya = Yaccel(i2c.scan()[i])/16393
-            button2_Status = button2.value()
-            # Speaker Activiation Count tracker. Will reset to zero if y accelerometer registers greater than .5 but not for 3 consecutive seconds.
-            if abs(ya) > .5:
-                current_fall = 1
+            if abs(ya - prev_ya) > .3:
+                L1.duty(85)
             else:
-                current_fall = 0
-                L1.duty(0)
-            if prev_fall == current_fall:
-                fall_count += current_fall
-            if prev_fall != current_fall:
-                fall_count  = current_fall
-                prev_fall = current_fall
-            # Enters into speaker activated mode after 3 consecutive seconds
-            if fall_count >= 10 and abs(ya) > .5:
-                # If the OK button is not pressed, the speaker will be unmuted, and a note in the song will be played each time the counter loops.
-                if button2_Status == 0:
-                    L1.duty(85)
-                    L1.freq(song[note_pointer])
-                    if note_pointer < len(song)-1:
-                        note_pointer += 1
-                    else:
-                        note_pointer = 0
-                # If the OK button is pressed, the speaker will be muted.
-                if button2_Status == 1:
-                    L1.duty(0)
-                    fall_count = 0
-                    note_pointer = 0
+                L1.duty(0) 
+            IMU_start = time.ticks_ms()
+
+
+        # # Fall Detection Speaker Activation Custom Timer
+        # if time.ticks_ms() - Speaker_Start >= Speaker_Interval:
+        #     ya = Yaccel(i2c.scan()[i])/16393
+        #     button2_Status = button2.value()
+        #     # Speaker Activiation Count tracker. Will reset to zero if y accelerometer registers greater than .5 but not for 3 consecutive seconds.
+        #     if abs(ya) > .5:
+        #         current_fall = 1
+        #     else:
+        #         current_fall = 0
+        #         L1.duty(0)
+        #     if prev_fall == current_fall:
+        #         fall_count += current_fall
+        #     if prev_fall != current_fall:
+        #         fall_count  = current_fall
+        #         prev_fall = current_fall
+        #     # Enters into speaker activated mode after 3 consecutive seconds
+        #     if fall_count >= 10 and abs(ya) > .5:
+        #         # If the OK button is not pressed, the speaker will be unmuted, and a note in the song will be played each time the counter loops.
+        #         if button2_Status == 0:
+        #             L1.duty(85)
+        #             L1.freq(song[note_pointer])
+        #             if note_pointer < len(song)-1:
+        #                 note_pointer += 1
+        #             else:
+        #                 note_pointer = 0
+        #         # If the OK button is pressed, the speaker will be muted.
+        #         if button2_Status == 1:
+        #             L1.duty(0)
+        #             fall_count = 0
+        #             note_pointer = 0
                 
             Speaker_Start = time.ticks_ms()
 except KeyboardInterrupt:

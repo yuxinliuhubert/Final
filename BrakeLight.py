@@ -105,6 +105,7 @@ i2c.writeto_mem(i2c.scan()[i],0x10,bytes(buff))
 i2c.writeto_mem(i2c.scan()[i],0x11,bytes(buff))
 time.sleep(0.01)
 
+prev_yacc = 0
 
 try:
     # button.callback(Pin.IRQ_RISING, lightChange)
@@ -119,16 +120,17 @@ try:
             xacc = Xaccel(i2c.scan()[i])/16393
             yacc = Yaccel(i2c.scan()[i])/16393
             zacc = Zaccel(i2c.scan()[i])/16393
-            # print("x,y,z ","%4.2f" % (xacc),"%4.2f" % (yacc-1),"%4.2f" % (zacc))
-            # print("%4.2f" % (yacc-1))
+            #print("x,y,z ","%4.2f" % (xacc),"%4.2f" % (yacc),"%4.2f" % (zacc))
+            print("%4.2f" % (yacc))
             IMU_start = time.ticks_ms()
 
         if time.ticks_ms() - light_start < light_interval:
-            if yacc-1.00<0.00 and abs(yacc-1)>0.075:
+            #if yacc-1.00<0.00 and abs(yacc-1)>0.075:
+            if abs(prev_yacc-yacc) > .3 and prev_yacc > yacc and yacc > 0:
                 lightCheck = 1
             else:
                 lightCheck = 0
-
+            prev_yacc = yacc
             if lightCheck == 1 and lightCheck != lightCheck_prev:
                 lightChange(state)
                 lightCheck_prev = lightCheck
@@ -165,4 +167,4 @@ try:
 
 except KeyboardInterrupt:
 	i2c.deinit()
-	pass
+

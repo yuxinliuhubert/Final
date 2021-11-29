@@ -152,10 +152,10 @@ mqtt.set_callback(sub_cb)
 for i in range(len(i2c.scan())):
     print(hex(i2c.scan()[i]))
 
-def WHOAMI(i2caddr):
-    whoami = i2c.readfrom_mem(i2caddr,0x0F,1)
-    #print(hex(int.from_bytes(whoami,"little")))
-    return whoami
+# def WHOAMI(i2caddr):
+#     whoami = i2c.readfrom_mem(i2caddr,0x0F,1)
+#     print(hex(int.from_bytes(whoami,"little")))
+#     return whoami
 
 # Temperature pulled data
 # def Temperature(i2caddr):
@@ -482,7 +482,6 @@ try:
                             # testMessage = "1"
                             mqtt.publish(feedName,testMessage)
                             print("Published {} to {}.".format(testMessage,feedName))
-
                             mqtt.subscribe(feedName)
                             alarm_sent_check = 1
                     L2.duty(85)
