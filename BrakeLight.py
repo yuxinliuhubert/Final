@@ -126,7 +126,7 @@ try:
 
         if time.ticks_ms() - light_start < light_interval:
             #if yacc-1.00<0.00 and abs(yacc-1)>0.075:
-            if abs(prev_yacc-yacc) > .3 and prev_yacc > yacc and yacc > 0:
+            if abs(prev_yacc-yacc) > .3 and prev_yacc < yacc and yacc < 0 and abs(xacc) < .5:
                 lightCheck = 1
             else:
                 lightCheck = 0
