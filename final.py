@@ -304,6 +304,8 @@ alarm_sent_check = 0
 
 divide = 16393
 
+prev_ya=0
+
 location_save = "Location unavailable"
 try:
     while(1):
@@ -333,12 +335,12 @@ try:
 
         # Brake light
         if time.ticks_ms() - light_start < light_interval:
-            if ya-1.00<0.00 and abs(ya-1)>0.075:
+            if abs(prev_ya-ya) > .3 and prev_ya < ya and ya < 0 and abs(xa) < .5:
                 # print("lightCheck = 1")
                 lightCheck = 1
             else:
                 lightCheck = 0
-
+            prev_ya = ya
             if lightCheck == 1 and lightCheck != lightCheck_prev:
                 lightChange(state)
                 lightCheck_prev = lightCheck
