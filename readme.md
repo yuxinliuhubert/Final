@@ -20,8 +20,10 @@ Cool intterupt error heirarchy
 https://docs.python.org/3/library/exceptions.html
 
 
+common commands:
 
+flash empty boot file to ESP32
+cp bootempty.py /flash/main.py
 
-
-
-
+flash the final file to ESP32 as main File
+cp final.py /flash/main.py
