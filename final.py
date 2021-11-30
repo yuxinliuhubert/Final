@@ -318,7 +318,7 @@ try:
         if gps.has_fix:
             # gps_time = "Current Time is {}/{}/{} {:02}:{:02}:{:02}".format(gps.timestamp_utc[0],gps.timestamp_utc[1],gps.timestamp_utc[2],gps.timestamp_utc[3],gps.timestamp_utc[4],gps.timestamp_utc[5])
             # gps_time = "Current Time is "+str(gps.timestamp_utc[0])+"/"+str(gps.timestamp_utc[1])+"/"+str(gps.timestamp_utc[2])+" "+str(round(gps.timestamp_utc[3]))+":"+str(round(gps.timestamp_utc[4]))+":"+str(round(gps.timestamp_utc[5]))
-            location_save = "{} W, {} N.".format(gps.longitude,gps.latitude)
+            location_save = "{} W, {} N".format(gps.longitude,gps.latitude)
         # IMU Data Update Custom Timer
         if time.ticks_ms() - IMU_Start >= IMU_Interval:
             check = button2.value()
@@ -408,14 +408,14 @@ try:
                         if alarm_sent_check == 0:
                             if gps.has_fix:
                                 testMessage = "Your friend might have taken a fall on {}/{}/{} at {:02}:{:02}:{:02} UTC".format(gps.timestamp_utc[1],gps.timestamp_utc[2],gps.timestamp_utc[0],gps.timestamp_utc[3],gps.timestamp_utc[4],gps.timestamp_utc[5])
-                                testMessage = "{} at this location coordinates: \n\n {} \n\n **Paste it in Google or Apple Map will give you the street-specific location!** Please contact your friend to confirm safety!".format(testMessage,location_save)
+                                testMessage = "{} at these location coordinates: \n\n {} \n\n**Paste it in Google or Apple Map will give you the street-specific location!** Please contact your friend to confirm safety!".format(testMessage,location_save)
                                 # print("fix fall message, ",testMessage)
                             else:
                                 last_print = time.gmtime()
                                 print(last_print)
                                 # last_print = gm_time_processor(last_print)
                                 testMessage ="Your friend might have taken a fall on {}/{}/{} at {:02}:{:02}:{:02} UTC".format(last_print[1],last_print[2],last_print[0],last_print[3],last_print[4],last_print[5])
-                                testMessage = "{}. The last active location coordinates were: \n\n {} \n\n **Paste it in Google or Apple Map will give you the street-specific location!** Please contact your friend to confirm safety!".format(testMessage,location_save)
+                                testMessage = "{}. The last active location coordinates were: \n\n {} \n\n**Paste it in Google or Apple Map will give you the street-specific location!** Please contact your friend to confirm safety!".format(testMessage,location_save)
                                 print("no fix fall message: ",testMessage)
 
 
