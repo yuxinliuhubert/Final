@@ -1,3 +1,6 @@
+# Establish Internet connection
+# from network import WLAN, STA_IF
+# from network import mDNS
 #<REQUIRED MODULES>
 #for communication and actuation of hardware components connected to ESP32
 from machine import Pin, PWM, I2C, UART
@@ -13,6 +16,65 @@ import sys
 import adafruit_gps
 from board import LED
 import gc
+from network import WLAN, STA_IF
+from network import mDNS
+
+wlan = WLAN(STA_IF)
+wlan.active(True)
+
+# wlan.connect('ME100-2.4G', '122Hesse', 5000)
+wlan.connect('3Yellow1Brown', 'Carolisqueen', 5000)
+
+tries = 0
+while not wlan.isconnected() and tries < 10:
+    print("Waiting for wlan connection")
+    time.sleep(1)
+    tries = tries + 1
+
+if wlan.isconnected():
+        print("WiFi connected at", wlan.ifconfig()[0])
+else:
+        print("Unable to connect to WiFi")
+
+# Advertise as 'hostname', alternative to IP address
+try:
+    hostname = "7750_HL"
+    mdns = mDNS(wlan)
+    # mdns.start(hostname, "MicroPython REPL")
+    # mdns.addService('_repl', '_tcp', 23, hostname)
+    mdns.start(hostname,"MicroPython with mDNS")
+    _ = mdns.addService('_ftp', '_tcp', 21, "MicroPython", {"board": "ESP32", "service": "my_hostname FTP File transfer", "passive": "True"})
+    _ = mdns.addService('_telnet', '_tcp', 23, "MicroPython", {"board": "ESP32", "service": "my_hostname Telnet REPL"})
+    _ = mdns.addService('_http', '_tcp', 80, "MicroPython", {"board": "ESP32", "service": "my_hostname Web server"})
+    print("Advertised locally as {}.local".format(hostname))
+
+except OSError:
+    print("Failed starting mDNS server - already started?")
+
+# start telnet server for remote login
+from network import telnet
+
+print("start telnet server")
+telnet.start(user='ylhubert2024', password='Diandian$69')
+
+# fetch NTP time
+from machine import RTC
+
+print("inquire RTC time")
+rtc = RTC()
+rtc.ntp_sync(server="pool.ntp.org")
+
+timeout = 2
+for _ in range(timeout):
+    if rtc.synced():
+        break
+    print("Waiting for rtc time")
+    time.sleep(1)
+
+if rtc.synced():
+    print(time.strftime("%c", time.localtime()))
+else:
+    print("could not get NTP time")
 
 gc.enable()
 gc.mem_alloc()
@@ -90,10 +152,10 @@ mqtt.set_callback(sub_cb)
 for i in range(len(i2c.scan())):
     print(hex(i2c.scan()[i]))
 
-def WHOAMI(i2caddr):
-    whoami = i2c.readfrom_mem(i2caddr,0x0F,1)
-    #print(hex(int.from_bytes(whoami,"little")))
-    return whoami
+# def WHOAMI(i2caddr):
+#     whoami = i2c.readfrom_mem(i2caddr,0x0F,1)
+#     print(hex(int.from_bytes(whoami,"little")))
+#     return whoami
 
 # Temperature pulled data
 # def Temperature(i2caddr):
@@ -304,7 +366,7 @@ alarm_sent_check = 0
 
 divide = 16393
 
-prev_ya=0
+prev_ya = 0
 
 location_save = "Location unavailable"
 try:
@@ -381,10 +443,10 @@ try:
             if gps.has_fix:
                 location_save = str(gps.longitude)+" W, "+str(gps.latitude)+" N."
 
-            za = Zaccel(i2c.scan()[i])/divide
+            xa = Xaccel(i2c.scan()[i])/divide
             button2_Status = button2.value()
             # Speaker Activiation Count tracker. Will reset to zero if y accelerometer registers greater than .5 but not for 3 consecutive seconds.
-            if abs(za) > .5:
+            if abs(xa) > .5:
                 current_fall = 1
             else:
                 current_fall = 0
@@ -422,7 +484,6 @@ try:
                             # testMessage = "1"
                             mqtt.publish(feedName,testMessage)
                             print("Published {} to {}.".format(testMessage,feedName))
-
                             mqtt.subscribe(feedName)
                             alarm_sent_check = 1
                     L2.duty(85)
