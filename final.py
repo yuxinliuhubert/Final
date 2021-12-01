@@ -19,23 +19,82 @@ import gc
 from network import WLAN, STA_IF
 from network import mDNS
 
+#<CONNECTED HARDWARE COMPONENTS>
 loudspeaker = Pin(4, mode=Pin.OUT)
+button = Pin(15, mode = Pin.IN)
+led = Pin(27, mode=Pin.OUT)
+uart = UART(2,tx=17,rx=16)
+i2c = I2C(1,scl=Pin(22),sda=Pin(23),freq=400000)
 
-#<NOTES SETUP WITH CORRESPONDING FREQUENCIES>
+# <NOTES SETUP WITH CORRESPONDING FREQUENCIES>
 C3 = 131
 DS4 = 311
 B4 = 494
 F5 = 698
 FS6 = 1480
 
-# song2=[FS6]
-L2 = PWM(loudspeaker, freq=FS6, duty=0, timer=1)
+#<ALARM SONG SETUP>
+song = [B4,F5,B4,F5]
 
+#<WHILE LOOP VARIABLE INITIALIZATIONS>
+#IMU Data Update Custom Timer Inits
+imu_interval = 10
+imu_start = 0
+#Fall Detection Speaker Activation Custom Timer Inits
+speaker_interval = 300
+speaker_start = 0
+#Brake Light Hold Timer Inits 
+light_interval = 2000
+light_start = 0
+#Brake Light Switch Timer Inits
+switch_interval = 1000
+switch_start = 0
+
+#<MISC INITIALIZATIONS>
+#Note Pointer in Song Counter Inits
+note_pointer = 0
+#Speaker Activation Counter Inits
+fall_count = 0
+current_fall = 0
+prev_fall = 0
+#Alarm Grace Period Inits
+alarm_Interval = 10000
+alarm_start = time.ticks_ms()
+#Alarm Usage Tracker Inits. (so that the fall time is only recorded once)
+alarm_start_check = 0
+alarm_sent_check = 0
+#Accelerometer Reading Calibration Inits  
+divide = 16393
+#Fall Detection for Jerk Inits
+prev_ya = 0
+#GPS Location Reading Inits
+location_save = "Location unavailable"
+# LED light configuration
+brightness = 0
+state = 0
+prevCheck = 0
+
+lightCheck = 0
+lightCheck_prev = 0
+
+lightSwitchCheck = 0
+lightSwitchCheck_prev = 0
+
+# <HARDWARE COMPONENT INITS>
+# Initialize LED light
+L1 = PWM(led,freq=500,duty=brightness,timer=0)
+# Initialize Loudspeaker song2=[FS6]
+L2 = PWM(loudspeaker, freq=FS6, duty=0, timer=1)
+# Initialize GPS
+uart.init(9600, bits=8, parity=None, stop=1)
+
+# <WIFI CONNECTION. UNCOMMENT THE CORRECT CONNECTION AND FLASH TO ESP32>
 wlan = WLAN(STA_IF)
 wlan.active(True)
 
 # wlan.connect('ME100-2.4G', '122Hesse', 5000)
-wlan.connect('3Yellow1Brown', 'Carolisqueen', 5000)
+# wlan.connect('3Yellow1Brown', 'Carolisqueen', 5000)
+wlan.connect('room4s','SphstakesonBerk1',5000)
 
 tries = 0
 while not wlan.isconnected() and tries < 15:
@@ -98,37 +157,6 @@ for _ in range(timeout):
 gc.enable()
 gc.mem_alloc()
 
-#<CONNECTED HARDWARE COMPONENTS>
-button2 = Pin(15, mode = Pin.IN)
-led_ext = Pin(27, mode=Pin.OUT)
-uart = UART(2,tx=17,rx=16)
-uart.init(9600, bits=8, parity=None, stop=1)
-
-# <INERTIAL MEASUREMENT UNIT READING TEMPERATURE, ACCELERATION, AND ANGULAR SPEED>
-i2c = I2C(1,scl=Pin(22),sda=Pin(23),freq=400000)
-
-
-# LED light configuration
-brightness = 0
-state = 0
-prevCheck = 0
-
-lightCheck = 0
-lightCheck_prev = 0
-
-lightSwitchCheck = 0
-lightSwitchCheck_prev = 0
-
-light_start = 0
-light_interval = 2000
-
-switch_start = 0
-switch_interval = 1000
-
-# initialize LED light
-L1 = PWM(led_ext,freq=500,duty=brightness,timer=0)
-
-
 gps = adafruit_gps.GPS(uart)
 
 # Turn on the basic GGA and RMC info (what you typically want)
@@ -139,10 +167,6 @@ gps.send_command("b'PMTK220,1000'")
 
 # Main loop runs forever printing the location, etc. every second.
 last_print = time.monotonic()
-
-# timer set up to update every 2 seconds
-gps_start = time.ticks_ms()
-gps_interval = 2000
 
 # register with adafruit website
 adafruitIoUrl = 'io.adafruit.com'
@@ -169,40 +193,22 @@ if wlan.isconnected():
 for i in range(len(i2c.scan())):
     print(hex(i2c.scan()[i]))
 
-# def WHOAMI(i2caddr):
-#     whoami = i2c.readfrom_mem(i2caddr,0x0F,1)
-#     print(hex(int.from_bytes(whoami,"little")))
-#     return whoami
-
-# Temperature pulled data
-# def Temperature(i2caddr):
-#     temperature = i2c.readfrom_mem(i2caddr,0x20,2)
-#     if int.from_bytes(temperature,"little") > 32767:
-#         temperature = int.from_bytes(temperature,"little")-65536
-#     else:
-#         temperature = int.from_bytes(temperature,"little")
-#     return temperature
-    #print("%4.2f" % ((temperature)/(256) + 25))
-
-# XYZ Acceleration pulled data
+# <XYZ ACCELERATION PULLED RAW DATA>
 def Xaccel(i2caddr):
     xacc = int.from_bytes(i2c.readfrom_mem(i2caddr,0x28,2),"little")
     if xacc > 32767:
         xacc = xacc -65536
     return xacc
-    #print("%4.2f" % (xacc/16393))
 def Yaccel(i2caddr):
     yacc = int.from_bytes(i2c.readfrom_mem(i2caddr,0x2A,2),"little")
     if yacc > 32767:
         yacc = yacc -65536
     return yacc
-    #print("%4.2f" % (yacc/16393))
 def Zaccel(i2caddr):
     zacc = int.from_bytes(i2c.readfrom_mem(i2caddr,0x2C,2),"little")
     if zacc > 32767:
         zacc = zacc -65536
     return zacc
-    #print("%4.2f" % (zacc/16393))
 
 # # XYZ Gyroscope pulled data
 # def Xgyro(i2caddr):
@@ -224,7 +230,7 @@ def Zaccel(i2caddr):
 #     return zgyr
 #     #print("%4.2f" % (zgyr/16393))
 
-# change light
+# <LIGHT MODE CHANGER>
 def lightChange(localState):
     global L1
     global state
@@ -242,90 +248,31 @@ def lightChange(localState):
         state = 0
         L1.duty(brightness)
 
-
-def gm_time_processor(string):
-    string = str(string)
-    # drop_index = string.find(', 1, 332)')
-    string = string[0:len(string)-9]
-
-    print(string)
-    string = string.replace('(','')
-    string = string.replace(')','')
-    # print(string)
-    for j in range (1,6):
-        index = string.find(' ')
-        string = "{}{}".format(string[0 : index],string[index + 1 : :])
-        # string = string[0 : index] + string[index + 1 : :]
-
-    for i in range (1,6):
-        index = string.find(',')
-        # print(index)
-        if i <= 2:
-            # string = string[0 : index] +"/"+string[index + 1 : :]
-            string = "{}/{}".format(string[0 : index],string[index + 1 : :])
-
-        elif i <= 3:
-            # string = string[0 : index] +" "+ string[index + 1 : :]
-            string = "{} at {}".format(string[0 : index],string[index + 1 : :])
-        else:
-            # string = string[0 : index] +":"+string[index + 1 : :]
-            string = "{}:{}".format(string[0 : index], string[index + 1 : :])
-    return string
-
 buff=[0xA0]
 i2c.writeto_mem(i2c.scan()[i],0x10,bytes(buff))
 i2c.writeto_mem(i2c.scan()[i],0x11,bytes(buff))
 time.sleep(0.1)
 
-
-
-#<SONG SETUP>
-song = [B4,F5,B4,F5]
-
-#<WHILE LOOP VARIABLE INITIALIZATIONS>
-#IMU Data Update Custom Timer Inits
-IMU_Interval = 10
-IMU_Start = 0
-#Fall Detection Speaker Activation Custom Timer Inits
-Speaker_Interval = 300
-Speaker_Start = 0
-#Note Pointer in Song Counter Inits
-note_pointer = 0
-#Speaker PWM Inits
-# L2 = PWM(loudspeaker, freq=song[note_pointer], duty=0, timer=1)
-#Speaker Activation Counter Inits
-fall_count = 0
-current_fall = 0
-prev_fall = 0
-
-alarm_Interval = 10000
-alarm_start = time.ticks_ms()
-# just so that the fall time is only recorded once
-alarm_start_check = 0
-alarm_sent_check = 0
-
-divide = 16393
-
-prev_ya = 0
-
-location_save = "Location unavailable"
 try:
     while(1):
+        # <MEMORY MANAGEMENT UPDATE TIMER>
         gc.mem_alloc()
+
+        # <MESSAGE UPDATE TIMER>
         if alarm_start_check == 0:
             alarm_start = time.ticks_ms()
+
+        # <GPS UPDATE TIMER>
         gps.update()
         if gps.has_fix:
-            # gps_time = "Current Time is {}/{}/{} {:02}:{:02}:{:02}".format(gps.timestamp_utc[0],gps.timestamp_utc[1],gps.timestamp_utc[2],gps.timestamp_utc[3],gps.timestamp_utc[4],gps.timestamp_utc[5])
-            # gps_time = "Current Time is "+str(gps.timestamp_utc[0])+"/"+str(gps.timestamp_utc[1])+"/"+str(gps.timestamp_utc[2])+" "+str(round(gps.timestamp_utc[3]))+":"+str(round(gps.timestamp_utc[4]))+":"+str(round(gps.timestamp_utc[5]))
             location_save = "{} W, {} N".format(gps.longitude,gps.latitude)
-        # IMU Data Update Custom Timer
-        if time.ticks_ms() - IMU_Start >= IMU_Interval:
-            check = button2.value()
+
+        # <IMU DATA UPDATE CUSTOM TIMER>
+        if time.ticks_ms() - imu_start >= imu_interval:
+            check = button.value()
             if check != prevCheck and check == 1:
                 state = state + 1
             prevCheck = check
-
             xa = Xaccel(i2c.scan()[i])/divide
             ya = Yaccel(i2c.scan()[i])/divide
             za = Zaccel(i2c.scan()[i])/divide
@@ -335,7 +282,7 @@ try:
             # print("x acc:","%4.2f" % (xa/16393), "y acc:", "%4.2f" % (ya/16393), "z acc:","%4.2f" % (za/16393), "x gyr:", "%4.2f" % (xg/16393), "y gyr:", "%4.2f" % (yg/16393), "z gyr:", "%4.2f" % (zg/16393))
             IMU_start = time.ticks_ms()
 
-        # Brake light
+        # <BRAKE LIGHT HOLD TIMER>
         if time.ticks_ms() - light_start < light_interval:
             if abs(prev_ya-ya) > .3 and prev_ya < ya and ya < 0 and abs(xa) < .5:
                 # print("lightCheck = 1")
@@ -355,6 +302,7 @@ try:
             lightChange(0)
             light_start = time.ticks_ms()
 
+        # <BRAKE LIGHT SWITCH TIMER>
         if time.ticks_ms() - switch_start >= switch_interval:
             # print("time interval")
             switch_start = time.ticks_ms()
@@ -369,22 +317,16 @@ try:
                 L1.duty(brightness)
                 L1.freq(500)
                 lightSwitchCheck_prev = 0
-
             # print("lightSwitchCheck ", lightSwitchCheck, " lightswitchcheck_prev ",lightSwitchCheck_prev )
             lightSwitchCheck = 1
 
         else:
             lightSwitchCheck = lightSwitchCheck*check
 
-
-
-        # Fall Detection Speaker Activation Custom Timer
-        if time.ticks_ms() - Speaker_Start >= Speaker_Interval:
-            # if gps.has_fix:
-            #     location_save = "{} W, {} N.".format(strgps.longitude,gps.latitude)
-
+        # <FALL DETECTION SPEAKER ACTIVATION CUSTOM TIMER>
+        if time.ticks_ms() - speaker_start >= speaker_interval:
             xa = Xaccel(i2c.scan()[i])/divide
-            button2_Status = button2.value()
+            button2_Status = button.value()
             # Speaker Activiation Count tracker. Will reset to zero if y accelerometer registers greater than .5 but not for 3 consecutive seconds.
             if abs(xa) > .5:
                 current_fall = 1
@@ -418,7 +360,6 @@ try:
                                 testMessage = "{}. The last active location coordinates were: \n\n {} \n\n**Paste the coordinates in Google or Apple Map will give you the street-specific location!** Please contact your friend to confirm safety!".format(testMessage,location_save)
                                 print("no fix fall message: ",testMessage)
 
-
                             # Send test message
                             feedName = "yuxinhubert/feeds/Final_project"
                             # testMessage = "1"
@@ -442,7 +383,7 @@ try:
                     L2.duty(0)
                     fall_count = 0
                     note_pointer = 0
-            Speaker_Start = time.ticks_ms()
+            speaker_start = time.ticks_ms()
 except KeyboardInterrupt:
     i2c.deinit()
     L1.deinit()
