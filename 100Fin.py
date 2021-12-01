@@ -343,7 +343,7 @@ try:
 
         # Brake light
         if time.ticks_ms() - light_start < light_interval:
-            if abs(prev_ya-ya) > .3 and prev_ya < ya and ya < 0 and abs(xa) < .5:
+            if abs(prev_ya-ya) > .25 and prev_ya < ya and ya < 0 and abs(xa) < .5:
                 # print("lightCheck = 1")
                 lightCheck = 1
             else:
