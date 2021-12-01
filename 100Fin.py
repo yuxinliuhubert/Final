@@ -242,6 +242,12 @@ def lightChange(localState):
         L1.duty(100)
         L1.freq(500)
 
+def lightOffDim():
+    global L1
+    global brightness
+    L1.duty(brightness)
+    L1.freq(0)
+
 
 def gm_time_processor(string):
     string = str(string)
@@ -352,7 +358,7 @@ try:
                 lightChange(state)
         else:
             lightCheck_prev = 0
-            lightChange(0)
+            lightOffDim()
             light_start = time.ticks_ms()
 
         if time.ticks_ms() - switch_start >= switch_interval:
@@ -360,14 +366,12 @@ try:
             switch_start = time.ticks_ms()
             if lightSwitchCheck == 1 and lightSwitchCheck_prev == 0:
                 brightness = 30
-                L1.duty(brightness)
-                L1.freq(500)
+                lightOffDim()
                 lightSwitchCheck_prev = lightSwitchCheck
                 # print("night light enabled")
             elif lightSwitchCheck == 1 and lightSwitchCheck_prev == lightSwitchCheck:
                 brightness = 0
-                L1.duty(brightness)
-                L1.freq(500)
+                lightOffDim()
                 lightSwitchCheck_prev = 0
 
             # print("lightSwitchCheck ", lightSwitchCheck, " lightswitchcheck_prev ",lightSwitchCheck_prev )
