@@ -342,24 +342,32 @@ try:
             IMU_start = time.ticks_ms()
 
         # Brake light
-        if time.ticks_ms() - light_start < light_interval:
-            if abs(prev_ya-ya) > .3 and prev_ya < ya and ya < 0 and abs(xa) < .5:
-                # print("lightCheck = 1")
-                lightCheck = 1
-            else:
-                lightCheck = 0
-            prev_ya = ya
-            if lightCheck == 1 and lightCheck != lightCheck_prev:
-                lightChange(state)
-                lightCheck_prev = lightCheck
-            if lightCheck == 1 and lightCheck == lightCheck_prev:
-                lightChange(state)
-            if lightCheck == 0 and lightCheck != lightCheck_prev:
-                lightChange(state)
-        else:
-            lightCheck_prev = 0
-            lightOffDim()
+
+        if abs(prev_ya-ya) > .3 and prev_ya < ya and ya < 0 and abs(xa) < .5:
+            # print("lightCheck = 1")
             light_start = time.ticks_ms()
+            lightCheck = 1
+        # else:
+        #     light_start = time.ticks_ms()
+        #     lightCheck = 0
+        prev_ya = ya
+
+
+        if lightCheck == 1:
+            if time.ticks_ms() - light_start < light_interval:
+                # if lightCheck == 1 and lightCheck != lightCheck_prev:
+                #     lightChange(state)
+                #     lightCheck_prev = lightCheck
+                # if lightCheck == 1 and lightCheck == lightCheck_prev:
+                #     lightChange(state)
+                # if lightCheck == 0 and lightCheck != lightCheck_prev:
+                #     lightChange(state)
+                lightChange(state)
+            else:
+                # lightCheck_prev = 0
+                lightCheck = 0
+                lightOffDim()
+                # light_start = time.ticks_ms()
 
         if time.ticks_ms() - switch_start >= switch_interval:
             # print("time interval")
