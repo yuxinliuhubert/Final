@@ -246,7 +246,7 @@ def lightOffDim():
     global L1
     global brightness
     L1.duty(brightness)
-    L1.freq(0)
+    L1.freq(500)
 
 
 def gm_time_processor(string):
@@ -312,12 +312,17 @@ alarm_sent_check = 0
 
 divide = 16393
 
+prev_xa = 0
 prev_ya = 0
+prev_za = 0
 
+mem_interval = 500
+mem_start = 0
 location_save = "Location unavailable"
 try:
     while(1):
-        gc.mem_alloc()
+        gc.collect()
+        
         if alarm_start_check == 0:
             alarm_start = time.ticks_ms()
         gps.update()
@@ -338,10 +343,14 @@ try:
             # xg = Xgyro(i2c.scan()[i])
             # yg = Ygyro(i2c.scan()[i])
             # zg = Zgyro(i2c.scan()[i])
-            # print("x acc:","%4.2f" % (xa/16393), "y acc:", "%4.2f" % (ya/16393), "z acc:","%4.2f" % (za/16393), "x gyr:", "%4.2f" % (xg/16393), "y gyr:", "%4.2f" % (yg/16393), "z gyr:", "%4.2f" % (zg/16393))
+            #print("x acc:","%4.2f" % (xa/16393), "y acc:", "%4.2f" % (ya/16393), "z acc:","%4.2f" % (za/16393)) #, "x gyr:", "%4.2f" % (xg/16393), "y gyr:", "%4.2f" % (yg/16393), "z gyr:", "%4.2f" % (zg/16393))
             IMU_start = time.ticks_ms()
 
+<<<<<<< HEAD
         # Brake light
+=======
+            # Brake light
+>>>>>>> 9eebf5212af339ba329d4b9bfcf2f243dabf1439
 
         if abs(prev_ya-ya) > .3 and prev_ya < ya and ya < 0 and abs(xa) < .5:
             # print("lightCheck = 1")
@@ -398,20 +407,23 @@ try:
             xa = Xaccel(i2c.scan()[i])/divide
             button2_Status = button2.value()
             # Speaker Activiation Count tracker. Will reset to zero if y accelerometer registers greater than .5 but not for 3 consecutive seconds.
-            if abs(xa) > .5:
+            if abs(prev_xa-xa) < .35 and abs(prev_ya-ya) < .35 and abs(prev_za-za) < .35:
                 current_fall = 1
             else:
                 current_fall = 0
                 alarm_start_check = 0
                 alarm_sent_check = 0
                 L2.duty(0)
+            prev_xa = xa
+            prev_ya = ya
+            prev_za = za
             if prev_fall == current_fall:
                 fall_count += current_fall
             if prev_fall != current_fall:
                 fall_count  = current_fall
                 prev_fall = current_fall
             # Enters into speaker activated mode after 3 consecutive seconds
-            if fall_count >= 10:
+            if fall_count >= 50:
 
                 # If the OK button is not pressed, the speaker will be unmuted, and a note in the song will be played each time the counter loops.
                 if button2_Status == 0:
@@ -420,14 +432,14 @@ try:
                         if alarm_sent_check == 0:
                             if gps.has_fix:
                                 testMessage = "Your friend might have taken a fall on {}/{}/{} at {:02}:{:02}:{:02} UTC".format(gps.timestamp_utc[1],gps.timestamp_utc[2],gps.timestamp_utc[0],gps.timestamp_utc[3],gps.timestamp_utc[4],gps.timestamp_utc[5])
-                                testMessage = "{} at these location coordinates (N, W): \n\n {} \n\n**Paste the coordinates in Google or Apple Map will give you the street-specific location!** Please contact your friend to confirm safety!".format(testMessage,location_save)
+                                testMessage = "{} at these location coordinates (latitude, longitude): \n\n {} \n\n**Paste the coordinates in Google or Apple Map will give you the street-specific location!** Please contact your friend to confirm their safety!".format(testMessage,location_save)
                                 # print("fix fall message, ",testMessage)
                             else:
                                 last_print = time.gmtime()
                                 print(last_print)
                                 # last_print = gm_time_processor(last_print)
                                 testMessage ="Your friend might have taken a fall on {}/{}/{} at {:02}:{:02}:{:02} UTC".format(last_print[1],last_print[2],last_print[0],last_print[3],last_print[4],last_print[5])
-                                testMessage = "{}. The last active location coordinates were (N,W): \n\n {} \n\n**Paste the coordinates in Google or Apple Map will give you the street-specific location!** Please contact your friend to confirm safety!".format(testMessage,location_save)
+                                testMessage = "{}. The last active location coordinates were (latitude, longitude): \n\n {} \n\n**Paste the coordinates in Google or Apple Map will give you the street-specific location!** Please contact your friend to confirm their safety!".format(testMessage,location_save)
                                 print("no fix fall message: ",testMessage)
 
 
@@ -455,6 +467,9 @@ try:
                     fall_count = 0
                     note_pointer = 0
             Speaker_Start = time.ticks_ms()
+        if time.ticks_ms() - mem_start >= mem_interval:
+            print(gc.mem_free())
+            mem_start = time.ticks_ms()
 except KeyboardInterrupt:
     i2c.deinit()
     L1.deinit()
