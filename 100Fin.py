@@ -312,12 +312,17 @@ alarm_sent_check = 0
 
 divide = 16393
 
+prev_xa = 0
 prev_ya = 0
+prev_za = 0
 
+mem_interval = 500
+mem_start = 0
 location_save = "Location unavailable"
 try:
     while(1):
-        gc.mem_alloc()
+        gc.collect()
+        
         if alarm_start_check == 0:
             alarm_start = time.ticks_ms()
         gps.update()
@@ -338,28 +343,36 @@ try:
             # xg = Xgyro(i2c.scan()[i])
             # yg = Ygyro(i2c.scan()[i])
             # zg = Zgyro(i2c.scan()[i])
-            # print("x acc:","%4.2f" % (xa/16393), "y acc:", "%4.2f" % (ya/16393), "z acc:","%4.2f" % (za/16393), "x gyr:", "%4.2f" % (xg/16393), "y gyr:", "%4.2f" % (yg/16393), "z gyr:", "%4.2f" % (zg/16393))
+            #print("x acc:","%4.2f" % (xa/16393), "y acc:", "%4.2f" % (ya/16393), "z acc:","%4.2f" % (za/16393)) #, "x gyr:", "%4.2f" % (xg/16393), "y gyr:", "%4.2f" % (yg/16393), "z gyr:", "%4.2f" % (zg/16393))
             IMU_start = time.ticks_ms()
 
-        # Brake light
-        if time.ticks_ms() - light_start < light_interval:
-            if abs(prev_ya-ya) > .25 and prev_ya < ya and ya < 0 and abs(xa) < .5:
-                # print("lightCheck = 1")
-                lightCheck = 1
-            else:
-                lightCheck = 0
-            prev_ya = ya
-            if lightCheck == 1 and lightCheck != lightCheck_prev:
-                lightChange(state)
-                lightCheck_prev = lightCheck
-            if lightCheck == 1 and lightCheck == lightCheck_prev:
-                lightChange(state)
-            if lightCheck == 0 and lightCheck != lightCheck_prev:
-                lightChange(state)
-        else:
-            lightCheck_prev = 0
-            lightOffDim()
+            # Brake light
+
+        if abs(prev_ya-ya) > .3 and prev_ya < ya and ya < 0 and abs(xa) < .5:
+            # print("lightCheck = 1")
             light_start = time.ticks_ms()
+            lightCheck = 1
+        # else:
+        #     light_start = time.ticks_ms()
+        #     lightCheck = 0
+        prev_ya = ya
+
+
+        if lightCheck == 1:
+            if time.ticks_ms() - light_start < light_interval:
+                # if lightCheck == 1 and lightCheck != lightCheck_prev:
+                #     lightChange(state)
+                #     lightCheck_prev = lightCheck
+                # if lightCheck == 1 and lightCheck == lightCheck_prev:
+                #     lightChange(state)
+                # if lightCheck == 0 and lightCheck != lightCheck_prev:
+                #     lightChange(state)
+                lightChange(state)
+            else:
+                # lightCheck_prev = 0
+                lightCheck = 0
+                lightOffDim()
+                # light_start = time.ticks_ms()
 
         if time.ticks_ms() - switch_start >= switch_interval:
             # print("time interval")
@@ -390,20 +403,23 @@ try:
             xa = Xaccel(i2c.scan()[i])/divide
             button2_Status = button2.value()
             # Speaker Activiation Count tracker. Will reset to zero if y accelerometer registers greater than .5 but not for 3 consecutive seconds.
-            if abs(xa) > .5:
+            if abs(prev_xa-xa) < .35 and abs(prev_ya-ya) < .35 and abs(prev_za-za) < .35:
                 current_fall = 1
             else:
                 current_fall = 0
                 alarm_start_check = 0
                 alarm_sent_check = 0
                 L2.duty(0)
+            prev_xa = xa
+            prev_ya = ya
+            prev_za = za
             if prev_fall == current_fall:
                 fall_count += current_fall
             if prev_fall != current_fall:
                 fall_count  = current_fall
                 prev_fall = current_fall
             # Enters into speaker activated mode after 3 consecutive seconds
-            if fall_count >= 10:
+            if fall_count >= 50:
 
                 # If the OK button is not pressed, the speaker will be unmuted, and a note in the song will be played each time the counter loops.
                 if button2_Status == 0:
@@ -447,6 +463,9 @@ try:
                     fall_count = 0
                     note_pointer = 0
             Speaker_Start = time.ticks_ms()
+        if time.ticks_ms() - mem_start >= mem_interval:
+            print(gc.mem_free())
+            mem_start = time.ticks_ms()
 except KeyboardInterrupt:
     i2c.deinit()
     L1.deinit()
