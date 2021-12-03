@@ -43,8 +43,8 @@ imu_start = 0
 #Fall Detection Speaker Activation Custom Timer Inits
 speaker_interval = 300
 speaker_start = 0
-#Brake Light Hold Timer Inits 
-light_interval = 2000
+#Brake Light Hold Timer Inits
+light_interval = 1000
 light_start = 0
 #Brake Light Switch Timer Inits
 switch_interval = 1000
@@ -66,7 +66,7 @@ alarm_start = time.ticks_ms()
 #Alarm Usage Tracker Inits. (so that the fall time is only recorded once)
 alarm_start_check = 0
 alarm_sent_check = 0
-#Accelerometer Reading Calibration Inits  
+#Accelerometer Reading Calibration Inits
 divide = 16393
 #Fall Detection for Jerk Inits
 prev_xa = 0
@@ -84,8 +84,7 @@ lightCheck_prev = 0
 
 lightSwitchCheck = 0
 lightSwitchCheck_prev = 0
-
-lightHold = 1
+# lightHold = 0
 
 # <HARDWARE COMPONENT INITS>
 # Initialize LED light
@@ -244,18 +243,17 @@ def lightChange(localState):
     global L1
     global state
     if localState == 0:
-        # print("state 0")
         L1.duty(100)
         L1.freq(500)
-    elif localState == 1:
+        # if lightHold == 1:
+        #     state = 1
+    else:
         L1.duty(50)
         L1.freq(5)
+        # if lightHold == 1:
+        #     print("here_")
+        #     state = 0
 
-    else:
-        # L1.duty(100)
-        state = 0
-        L1.duty(100)
-        L1.freq(500)
 
 def lightOffDim():
     global L1
@@ -286,8 +284,10 @@ try:
         if time.ticks_ms() - imu_start >= imu_interval:
             check = button.value()
             if check != prevCheck and check == 1:
-                state = state + 1
+                state = not state
             prevCheck = check
+            # print("state {},lightHold {}, check {}".format(state,lightHold,check))
+            # lightHold = not state
             xa = Xaccel(i2c.scan()[i])/divide
             ya = Yaccel(i2c.scan()[i])/divide
             za = Zaccel(i2c.scan()[i])/divide
@@ -296,8 +296,8 @@ try:
             # zg = Zgyro(i2c.scan()[i])
             # print("x acc:","%4.2f" % (xa/16393), "y acc:", "%4.2f" % (ya/16393), "z acc:","%4.2f" % (za/16393), "x gyr:", "%4.2f" % (xg/16393), "y gyr:", "%4.2f" % (yg/16393), "z gyr:", "%4.2f" % (zg/16393))
             IMU_start = time.ticks_ms()
-        
-        if abs(prev_ya-ya) > .3 and prev_ya < ya and ya < 0 and abs(xa) < .3:
+
+        if abs(prev_ya-ya) > .3 and prev_ya < ya and ya < 0 and abs(xa) < .4:
             # print("lightCheck = 1")
             light_start = time.ticks_ms()
             lightCheck = 1
@@ -327,20 +327,30 @@ try:
             # print("time interval")
             switch_start = time.ticks_ms()
             if lightSwitchCheck == 1 and lightSwitchCheck_prev == 0:
-                brightness = 30
+                brightness = 10
+                state = not state
                 lightOffDim()
                 lightSwitchCheck_prev = lightSwitchCheck
+                # lightHold = 0
                 # print("night light enabled")
             elif lightSwitchCheck == 1 and lightSwitchCheck_prev == lightSwitchCheck:
                 brightness = 0
+                state = not state
                 lightOffDim()
                 lightSwitchCheck_prev = 0
+                # lightHold = 0
 
             # print("lightSwitchCheck ", lightSwitchCheck, " lightswitchcheck_prev ",lightSwitchCheck_prev )
             lightSwitchCheck = 1
-
+            # lightHold = 0
+            # print("light hold {} state {}".format(lightHold,state))
         else:
             lightSwitchCheck = lightSwitchCheck*check
+            # if lightSwitchCheck == 1:
+            #     lightHold = True
+            # else:
+            #     lightHold = 0
+            # print("light hold {} state {} lightSwitchCheck {}".format(lightHold,state,lightSwitchCheck))
 
 
         # <FALL DETECTION SPEAKER ACTIVATION CUSTOM TIMER>
@@ -408,7 +418,7 @@ try:
                     note_pointer = 0
             speaker_start = time.ticks_ms()
         if time.ticks_ms() - mem_start >= mem_interval:
-            print(gc.mem_free())
+            # print(gc.mem_free())
             mem_start = time.ticks_ms()
 except KeyboardInterrupt:
     i2c.deinit()

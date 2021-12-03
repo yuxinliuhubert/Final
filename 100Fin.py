@@ -322,7 +322,7 @@ location_save = "Location unavailable"
 try:
     while(1):
         gc.collect()
-        
+
         if alarm_start_check == 0:
             alarm_start = time.ticks_ms()
         gps.update()
@@ -346,11 +346,7 @@ try:
             #print("x acc:","%4.2f" % (xa/16393), "y acc:", "%4.2f" % (ya/16393), "z acc:","%4.2f" % (za/16393)) #, "x gyr:", "%4.2f" % (xg/16393), "y gyr:", "%4.2f" % (yg/16393), "z gyr:", "%4.2f" % (zg/16393))
             IMU_start = time.ticks_ms()
 
-<<<<<<< HEAD
         # Brake light
-=======
-            # Brake light
->>>>>>> 9eebf5212af339ba329d4b9bfcf2f243dabf1439
 
         if abs(prev_ya-ya) > .3 and prev_ya < ya and ya < 0 and abs(xa) < .5:
             # print("lightCheck = 1")
